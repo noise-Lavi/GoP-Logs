@@ -2,59 +2,50 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Guild Logs – Wochenübersicht</title>
+<title>Guild Leads</title>
 <style>
-    body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #0f172a;
-        color: #e5e7eb;
-        margin: 0;
-        padding: 40px;
-    }
-    h1 {
-        margin-bottom: 20px;
-    }
-    ul {
-        list-style: none;
-        padding: 0;
-        max-width: 500px;
-    }
-    li {
-        margin: 10px 0;
-        background: #1e293b;
-        border-radius: 10px;
-        transition: 0.2s;
-    }
-    li:hover {
-        background: #334155;
-    }
-    a {
-        display: block;
-        padding: 14px 18px;
-        text-decoration: none;
-        color: #93c5fd;
-        font-size: 1.05em;
-    }
-    footer {
-        margin-top: 40px;
-        opacity: 0.6;
-        font-size: 0.9em;
-    }
+body { background:#0f172a; color:#e5e7eb; font-family: system-ui; padding:40px; }
+h1 { margin-bottom:20px; }
+ul { list-style:none; padding:0; max-width:600px; }
+li { background:#1e293b; margin:10px 0; border-radius:10px; }
+a { display:flex; justify-content:space-between; padding:14px 18px; text-decoration:none; color:#93c5fd; }
+small { opacity:0.7; }
 </style>
 </head>
 <body>
 
-<h1>🛡️ Guild Logs – Wochenübersicht</h1>
+<h1>🧭 Guild Leads</h1>
+<ul id="list"></ul>
 
-<ul>
-    <!-- Neue Wochen einfach hier ergänzen -->
-    <li><a href="weeks/2025-12-20.html">20.12.2025</a></li>
-    <li><a href="weeks/2025-12-27.html">27.12.2025</a></li>
-</ul>
+<script>
+const USER = "DEINNAME";
+const REPO = "REPO";
+const PATH = "leads";
 
-<footer>
-    Aktualisiert manuell – neueste Logs immer oben.
-</footer>
+fetch(`https://api.github.com/repos/${USER}/${REPO}/commits?path=${PATH}`)
+.then(r => r.json())
+.then(data => {
+    const map = {};
+    data.forEach(c => {
+        c.files?.forEach(f => {
+            if (f.filename.startsWith(PATH + "/")) {
+                map[f.filename] = c.commit.author.date;
+            }
+        });
+    });
+
+    const entries = Object.entries(map)
+        .sort((a,b)=> new Date(b[1]) - new Date(a[1]));
+
+    const ul = document.getElementById("list");
+    entries.forEach(([file, date]) => {
+        const name = file.split("/").pop();
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="${file}">${name}<small>${new Date(date).toLocaleDateString()}</small></a>`;
+        ul.appendChild(li);
+    });
+});
+</script>
 
 </body>
 </html>
