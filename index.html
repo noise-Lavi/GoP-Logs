@@ -4,47 +4,93 @@
 <meta charset="UTF-8">
 <title>Guild Leads</title>
 <style>
-body { background:#0f172a; color:#e5e7eb; font-family: system-ui; padding:40px; }
-h1 { margin-bottom:20px; }
-ul { list-style:none; padding:0; max-width:600px; }
-li { background:#1e293b; margin:10px 0; border-radius:10px; }
-a { display:flex; justify-content:space-between; padding:14px 18px; text-decoration:none; color:#93c5fd; }
-small { opacity:0.7; }
+body {
+    background:#0f172a;
+    color:#e5e7eb;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding:40px;
+}
+h1 {
+    margin-bottom:20px;
+}
+ul {
+    list-style:none;
+    padding:0;
+    max-width:700px;
+}
+li {
+    background:#1e293b;
+    margin:10px 0;
+    border-radius:10px;
+    padding:12px 18px;
+    transition:0.15s ease-in-out;
+}
+li:hover {
+    background:#334155;
+}
+a {
+    text-decoration:none;
+    color:#93c5fd;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+small {
+    font-size:0.85em;
+    opacity:0.7;
+}
 </style>
 </head>
 <body>
 
-<h1>🧭 Guild Leads</h1>
-<ul id="list"></ul>
+<h1>🛡️ Guild Leads</h1>
+<ul id="leadList"></ul>
 
 <script>
-const USER = "DEINNAME";
-const REPO = "REPO";
-const PATH = "leads";
+// GitHub API
+const USER = "noise-lavi";
+const REPO = "GoP-Logs";
+const PATH = "leads/";
 
-fetch(`https://api.github.com/repos/${USER}/${REPO}/commits?path=${PATH}`)
-.then(r => r.json())
-.then(data => {
-    const map = {};
-    data.forEach(c => {
-        c.files?.forEach(f => {
-            if (f.filename.startsWith(PATH + "/")) {
-                map[f.filename] = c.commit.author.date;
-            }
-        });
+fetch(`https://api.github.com/repos/${USER}/${REPO}/contents/${PATH}`)
+  .then(res => res.json())
+  .then(files => {
+    // Filter only html
+    const htmlFiles = files.filter(f => f.name.toLowerCase().endsWith(".html"));
+
+    // Now get commit dates
+    return Promise.all(htmlFiles.map(f =>
+      fetch(`https://api.github.com/repos/${USER}/${REPO}/commits?path=${PATH}${f.name}`)
+        .then(res => res.json())
+        .then(commits => ({
+          name: f.name,
+          url: f.download_url,
+          date: commits[0]?.commit?.committer?.date || ""
+        }))
+    ));
+  })
+  .then(entries => {
+    // sort newest first
+    entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const list = document.getElementById("leadList");
+    entries.forEach(e => {
+      const item = document.createElement("li");
+      item.innerHTML = `
+        <a href="${e.url}" target="_blank">
+          <span>${e.name.replace(".html","")}</span>
+          <small>${new Date(e.date).toLocaleDateString("de-DE", {
+            year:"numeric", month:"2-digit", day:"2-digit"
+          })}</small>
+        </a>
+      `;
+      list.appendChild(item);
     });
-
-    const entries = Object.entries(map)
-        .sort((a,b)=> new Date(b[1]) - new Date(a[1]));
-
-    const ul = document.getElementById("list");
-    entries.forEach(([file, date]) => {
-        const name = file.split("/").pop();
-        const li = document.createElement("li");
-        li.innerHTML = `<a href="${file}">${name}<small>${new Date(date).toLocaleDateString()}</small></a>`;
-        ul.appendChild(li);
-    });
-});
+  })
+  .catch(err => {
+    console.error("Fehler beim Laden:", err);
+    document.getElementById("leadList").innerHTML = "<li>Fehler beim Laden der Leads</li>";
+  });
 </script>
 
 </body>
